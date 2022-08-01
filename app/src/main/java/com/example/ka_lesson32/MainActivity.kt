@@ -1,41 +1,47 @@
 package com.example.ka_lesson32
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import com.example.ka_lesson32.databinding.ActivityMainBinding
+
+/*Как можно обмениватся данными между фрагментами и активити? Для этого мы будем использовать ViewModel и lifeData
+ViewModel - это специальный класс который переживает цикл жизни activity
+Внутри ViewModel будем хранить LifeData - это специальный класс, который позволяет передать туда какой-нибудь объект, и этот объект обновляется
+согласно циклу жизни activity. То-есть нам самим уже не нужно следить за циклом жизни активити.
+Для этого необходимо добавить зависимости в build.gradle(Module):
+
+implementation 'androidx.fragment:fragment-ktx:1.5.1'
+implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1'
+ */
+//4.Для того чтобы передавать данные(объекты типа String) между фрагментами и активити будем использовать ViewModel, для этого создадим класс DataModel
 
 class MainActivity : AppCompatActivity() {
     lateinit var binding: ActivityMainBinding
+    private val dataModel: DataModel by viewModels()    //6. Добавляем DataModel. Создали инстанцию нашего класса
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        //2.Создаем слушателя нажатий для второго фрагмента. Фрагмент 2 на запустится, пока не нажмешь на кнопку, так как он прикреплен к слушателю нажатий
-        binding.bFrag2.setOnClickListener {
-            //3. Запускаем второй фрагмент
-            supportFragmentManager.beginTransaction().
-            replace(R.id.place_holder, BlankFragment2.newInstance())
-                .commit()
-        }
+        openFrag(BlankFragment.newInstance(), R.id.place_holder)    //2. Вызвали фрагмент 1
+        openFrag(BlankFragment2.newInstance(), R.id.place_holder2)  //3. Вызвали фрагмент 2
 
-        supportFragmentManager.beginTransaction().  //1.Запускаем наш фрагмент  **
-        replace(R.id.place_holder, BlankFragment.newInstance())
+        dataModel.messageForActivity.observe(this, { name->    //7*в observe() передаем того,у кого мы будем следить за циклом жизни. Name - это переименованная переменная it
+                binding.textView.text = name//8. Здесь мы обновляем userInterface
+        })
+    }
+
+    private fun openFrag(f: Fragment, idHolder: Int) {    //1.Создали функцию для создания фрагмента
+        supportFragmentManager
+            .beginTransaction()
+            .replace(idHolder, f)
             .commit()
     }
 
-
 }
 
-//** beginTransaction() - функция для запуска фрагмента
-
-//  replace() - заменить тот фрагмент, который уже есть в контейнере, на новый (у нас еще нет фрагмента в контейнере, поэтому мы его пока создаем)
-
-//  replace(R.id.place_holder, ... )  - указываем название place_holder - контейнера, который будет содержать наш фрагмент (его id)
-
-// replace(..., BlankFragment.newInstance())... - один из двух способов запустить наш фрагмент. Если написать BlankFragment() - то инстанция фрагмента будет каждый раз создаваться
-// но поскольку мы используем singlton паттерн companion object, то мы пишем: BlankFragment.newInstance()
-
-//commit() - функция для запуска фрагмента
-
-//Что произойдет? На то место, где находится framelayout добавится разметка фрагмента. Запустится фрагмент, начнется его цикл жизни.
+//7. Тепер создаем observe - это наблюдатель который наблюдает, когда нужно обновить данные. Как только мы отправим данные, они не мгновенно появятся
+// в textView, а наблюдатель будет смотреть за циклом жизни активити и обновит данные в textView когда это можно будет сделать
